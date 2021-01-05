@@ -41,6 +41,14 @@ call spacevim#bootstrap()
 
 
 " ######################### user ##########################
+" <leader> is whitespace
+let mapleader = " "
+
+" 打开自动定位到最后编辑的位置, 需要确认 .viminfo 当前用户可写
+"   if has("autocmd")
+"     au BufReadPost * if line("'\"") > 1 && line("'\"") <= line("$") | exe "normal! g'\"" | endif
+"   endif
+
 " Ranges
 " The / address can be preceded with another address. This allows you to stack patterns, e.g.:
 "   :/foo//bar//quux/d
@@ -57,13 +65,75 @@ call spacevim#bootstrap()
 "   :h cmdline-ranges
 "   :h 10.3
 
-" cursor option
-set cursorcolumn
-set cursorline
-" indent option
-set tabstop=4       " insert mode tab use 4 spaces
-set shiftwidth=4    " indent 4 spaces when using >> or <<
-set softtabstop=4   " insert mode tab and backspace use 4 spaces "
+" show bracket pairs
+"   set showmatch
+set list
+set nobackup
+
+" scroll {
+    " 在上下移动光标时，光标的上方或下方至少会保留显示的行数
+    set scrolloff=7
+
+    " 滚动Speed up scrolling of the viewport slightly
+    nnoremap <C-e> 2<C-e>
+    nnoremap <C-y> 2<C-y>
+" }
+
+" cursor {
+    set cursorcolumn
+    set cursorline
+    " cursor colors
+    let &t_SI = "\<Esc>]50;CursorShape=1\x7"
+    let &t_SR = "\<Esc>]50;CursorShape=2\x7"
+    let &t_EI = "\<Esc>]50;CursorShape=0\x7"
+" }
+
+" Formatting {
+    " convert tab to whitespace
+    " 将Tab自动转化成空格[需要输入真正的Tab键时，使用 Ctrl+V + Tab]
+    set expandtab
+    " indentation option
+    " 设置Tab键的宽度        [等同的空格个数]
+    set tabstop=4       " insert mode tab use 4 spaces
+    " 按退格键时可以一次删掉 4 个空
+    set shiftwidth=4    " indent 4 spaces when using >> or <<
+    " 缩进时，取整 use multiple of shiftwidth when indenting with '<' and '>'
+    set shiftround
+    " insert tabs on the start of a line according to shiftwidth, not tabstop 按退格键时可以一次删掉 4 个空格
+    set smarttab
+    autocmd FileType haskell,puppet,ruby,yml
+                \ setlocal expandtab shiftwidth=2 softtabstop=2   set softtabstop=4   " insert mode tab and backspace use 4 spaces "
+" }
+
+" quickfix {
+    " In the quickfix window, <CR> is used to jump to the error under the
+    " cursor, so undefine the mapping there.
+    autocmd BufReadPost quickfix nnoremap <buffer> <CR> <CR>
+    " quickfix window  s/v to open in split window,  ,gd/,jd => quickfix window => open it
+    autocmd BufReadPost quickfix nnoremap <buffer> v <C-w><Enter><C-w>L
+    autocmd BufReadPost quickfix nnoremap <buffer> s <C-w><Enter><C-w>K
+    " 离开插入模式后自动关闭预览窗口
+    autocmd InsertLeave * if pumvisible() == 0|pclose|endif
+" }
+
+" number line {
+    " 相对行号: 行号变成相对，可以用 nj/nk 进行跳转
+    set relativenumber number
+    au FocusLost * :set norelativenumber number
+    au FocusGained * :set relativenumber
+    " 插入模式下用绝对行号, 普通模式下用相对
+    autocmd InsertEnter * :set norelativenumber number
+    autocmd InsertLeave * :set relativenumber
+    function! NumberToggle()
+    if(&relativenumber == 1)
+        set norelativenumber number
+    else
+        set relativenumber
+    endif
+    endfunc
+    nnoremap <C-n> :call NumberToggle()<cr>
+" }
+
 " Reload a file on saving
 "  au BufWritePost $MYVIMRC source $MYVIMRC
 
@@ -79,11 +149,11 @@ set softtabstop=4   " insert mode tab and backspace use 4 spaces "
 set complete-=i   " disable scanning included files
 set complete-=t   " disable searching tags
 
-" <leader> is whitespace
-let mapleader = " "
 " change region around brackets
 onoremap in) :<c-u>normal! f)vi)<cr>
 onoremap in( :<c-u>normal! f(vi(<cr>
+onoremap in} :<c-u>normal! f}vi}<cr>
+onoremap in{ :<c-u>normal! f{vi{<cr>
 
 " Don't lose selection when shifting sidewards
 " If you select one or more lines, you can use < and > for shifting them sidewards. Unfortunately you immediately lose the selection afterwards.
@@ -105,7 +175,7 @@ nnoremap <leader>m  :<c-u><c-r><c-r>='let @'. v:register .' = '. string(getreg(v
 " Notice the use of <c-r><c-r> to make sure that the <c-r> is inserted literally. See :h c_^R^R.
 
 " Quickly jump to header or source file
-" This technique can probably be applied to many filetypes. It sets file marks (see :h marks) when leaving a source or 
+" This technique can probably be applied to many filetypes. It sets file marks (see :h marks) when leaving a source or
 "  header file, so you can quickly jump back to the last accessed one by using 'C or 'H (see :h 'A).
 autocmd BufLeave *.{c,cpp} mark C
 autocmd BufLeave *.h       mark H
@@ -190,7 +260,7 @@ set clipboard^=unnamedplus  " + register
 
 " Block insert
 " Switch to visual block mode with <c-v>. Afterwards go down for a few lines. Hit <I> or <A> and start entering your text.
-" If you have lines of different length and want to append the same text right after the end of each line, do this: 
+" If you have lines of different length and want to append the same text right after the end of each line, do this:
 "   <c-v>3j$Atext<esc>
 
 " Running external programs and using filters
@@ -198,7 +268,7 @@ set clipboard^=unnamedplus  " + register
 " E.g. for prepending numbers to the next 5 lines, use this:
 "   :.,+4!nl -ba -w1 -s' '
 
-" People often use :r !prog to put the output of prog below the current line, which is fine for scripts, but when doing it 
+" People often use :r !prog to put the output of prog below the current line, which is fine for scripts, but when doing it
 " on the fly, I find it easier to use !!ls instead, which replaces the current line.
 "   :h filter
 "   :h :read!
@@ -258,58 +328,320 @@ nnoremap <leader>l :nohlsearch<cr>:diffupdate<cr>:syntax sync fromstart<cr><c-l>
 "   :h :redir
 "   :h execute()
 
+
 " ######################### mapping ##########################
 " save
 nnoremap <leader>w :w<CR>
 " exit vim
 nnoremap <leader>q :q<CR>
 " select all
-map <Leader>sa ggVG"
-" zz >>> align center
-" search forward or backward and align center
-nnoremap <silent> n nzz
-nnoremap <silent> N Nzz
-" go to bottom and align center
-nnoremap <silent> G Gzz
-" search and align center
-nnoremap <silent> * *zz
-nnoremap <silent> g* g*zz
-nnoremap <silent> # #zz
-nnoremap <silent> g# g#zz
+nnoremap <Leader>sa ggVG"
+" highlight last inserted text
+nnoremap gV `[v`]
+
+" align center {
+    " zz >>> align center
+    " search forward or backward and align center
+    nnoremap <silent> n nzz
+    nnoremap <silent> N Nzz
+    " go to bottom and align center
+    nnoremap <silent> G Gzz
+    " search and align center
+    nnoremap <silent> * *zz
+    nnoremap <silent> g* g*zz
+    nnoremap <silent> # #zz
+    nnoremap <silent> g# g#zz
+    " skip between bracket
+    nnoremap <silent> % %zz
+" }
+
 " disable hightlight for search
 noremap <silent><leader>/ :nohls<CR>
-" yank from cursor to end of current line
+" Y key: yank from cursor to end of current line
 map Y y$
-noremap ; :
-" move cursor to begin or end of curent line
+" go to begin or end of curent line
 nnoremap H ^
 nnoremap L $
-" command key binding is similar to terminal key binding
-cnoremap <C-j> <t_kd>
-cnoremap <C-k> <t_ku>
-cnoremap <C-a> <Home>
-cnoremap <C-e> <End>
+
+" command line {
+    noremap ; :
+    " command key binding is similar to terminal key binding
+    cnoremap <C-j> <t_kd>
+    cnoremap <C-k> <t_ku>
+    cnoremap <C-a> <Home>
+    cnoremap <C-e> <End>
+
+    " Shortcuts
+    " Change Working Directory to that of the current file
+    cm cwd lcd %:p:h
+    cm cd. lcd %:p:h
+
+    " For when you forget to sudo.. Really Write the file.
+    cm w!! w !sudo tee % >/dev/null
+
+    " command-line window
+    autocmd CmdwinEnter * nnoremap <buffer> <CR> <CR>
+" }
+
 
 " display center after opening file
 au BufReadPost * :normal! zz<cr>
 
-" toggle number line
-nnoremap <F2> :set nu! nu?<CR>
-" toggle tab symbol
-nnoremap <F3> :set list! list?<CR>
-" toggle wrap
-nnoremap <F4> :set wrap! wrap?<CR>
+" toggle {
+    " F1 - F6 设置
 
-" transfer screen
-map <C-j> <C-W>j
-map <C-k> <C-W>k
-map <C-h> <C-W>h
-map <C-l> <C-W>l
+    " F1 废弃这个键,防止调出系统帮助
+    " I can type :help on my own, thanks.  Protect your fat fingers from the evils of <F1>
+    noremap <F1> <Esc>"
+    " F2 行号开关，用于鼠标复制代码用
+    " 为方便复制，用<F2>开启/关闭行号显示:
+    function! HideNumber()
+      if(&relativenumber == &number)
+        set relativenumber! number!
+      elseif(&number)
+        set number!
+      else
+        set relativenumber!
+      endif
+      set number?
+    endfunc
+    nnoremap <F2> :call HideNumber()<CR>
+    " toggle number line
+    "   nnoremap <F2> :set nu! nu?<CR>
+    " F3 显示可打印字符开关
+    " toggle tab symbol
+    nnoremap <F3> :set list! list?<CR>
+    " F4 换行开关
+    " toggle wrap
+    nnoremap <F4> :set wrap! wrap?<CR>
+    " F6 语法开关，关闭语法可以加快大文件的展示
+    nnoremap <F6> :exec exists('syntax_on') ? 'syn off' : 'syn on'<CR>
 
-nnoremap <F6> :exec exists('syntax_on') ? 'syn off' : 'syn on'<CR>
+    set pastetoggle=<F5>            "    when in insert mode, press <F5> to go to
+                                    "    paste mode, where you can paste mass data
+                                    "    that won't be autoindented
+" }
+
+" screen/window {
+    set splitright                      " Puts new vsplit windows to the right
+    set splitbelow                      " Puts new split windows to the bottom
+
+    " 分屏窗口移动, Smart way to move between windows
+    map <C-j> <C-W>j
+    map <C-k> <C-W>k
+    map <C-h> <C-W>h
+    map <C-l> <C-W>l
+    " c-j,k for buffer switch
+    nm <c-j> :bn<cr>
+    nm <c-k> :bp<cr>
+    nm <tab> <c-w>w
+
+    " resize screen
+    map <up> :res +5<CR>
+    map <down> :res -5<CR>
+    map <left> :vertical resize-5<CR>
+    map <right> :vertical resize+5<CR>ap <C-l> <C-W>l
+" }
+
+" http://stackoverflow.com/questions/13194428/is-better-way-to-zoom-windows-in-vim-than-zoomwin
+" Zoom / Restore window.
+function! s:ZoomToggle() abort
+    if exists('t:zoomed') && t:zoomed
+        execute t:zoom_winrestcmd
+        let t:zoomed = 0
+    else
+        let t:zoom_winrestcmd = winrestcmd()
+        resize
+        vertical resize
+        let t:zoomed = 1
+    endif
+endfunction
+command! ZoomToggle call s:ZoomToggle()
+nnoremap <silent> <Leader>z :ZoomToggle<CR>
+
+" Tab {
+    " tab 操作
+    " http://vim.wikia.com/wiki/Alternative_tab_navigation
+    " http://stackoverflow.com/questions/2005214/switching-to-a-particular-tab-in-vim
+
+    " tab mapping
+    map tu :tabe<CR>
+    map tn :-tabnext<CR>
+    map ti :+tabnext<CR>
+
+    " tab切换
+    map <leader>th :tabfirst<cr>
+    map <leader>tl :tablast<cr>
+
+    map <leader>tj :tabnext<cr>
+    map <leader>tk :tabprev<cr>
+    map <leader>tn :tabnext<cr>
+    map <leader>tp :tabprev<cr>
+
+    map <leader>te :tabedit<cr>
+    map <leader>td :tabclose<cr>
+    map <leader>tm :tabm<cr>
+
+    " 新建tab  Ctrl+t
+    nnoremap <C-t>     :tabnew<CR>
+    inoremap <C-t>     <Esc>:tabnew<CR>
+
+    " Toggles between the active and last active tab "
+    " The first tab is always 1 "
+    let g:last_active_tab = 1
+    " nnoremap <leader>gt :execute 'tabnext ' . g:last_active_tab<cr>
+    " nnoremap <silent> <c-o> :execute 'tabnext ' . g:last_active_tab<cr>
+    " vnoremap <silent> <c-o> :execute 'tabnext ' . g:last_active_tab<cr>
+    nnoremap <silent> <leader>tt :execute 'tabnext ' . g:last_active_tab<cr>
+    autocmd TabLeave * let g:last_active_tab = tabpagenr()
+
+    " normal模式下切换到确切的tab
+    noremap <leader>1 1gt
+    noremap <leader>2 2gt
+    noremap <leader>3 3gt
+    noremap <leader>4 4gt
+    noremap <leader>5 5gt
+    noremap <leader>6 6gt
+    noremap <leader>7 7gt
+    noremap <leader>8 8gt
+    noremap <leader>9 9gt
+    noremap <leader>0 :tablast<cr>
+" }
+
+map sv <C-w>t<C-w>H
+map sh <C-w>t<C-w>K
+
+" Some helpers to edit mode
+cm %% <C-R>=fnameescape(expand('%:h')).'/'<cr>
+nm <leader>ew :e %%
+nm <leader>es :sp %%
+nm <leader>ev :vsp %%
+nm <leader>et :tabe %%
+
+" 代码折叠自定义快捷键 <leader>zz
+let g:FoldMethod = 0
+map <leader>zz :call ToggleFold()<cr>
+fun! ToggleFold()
+    if g:FoldMethod == 0
+        exe "normal! zM"
+        let g:FoldMethod = 1
+    else
+        exe "normal! zR"
+        let g:FoldMethod = 0
+    endif
+endfun
+
+" 设置可以高亮的关键字
+if has("autocmd")
+  " Highlight TODO, FIXME, NOTE, etc.
+  if v:version > 701
+    autocmd Syntax * call matchadd('Todo',  '\W\zs\(TODO\|FIXME\|CHANGED\|DONE\|XXX\|BUG\|HACK\)')
+    autocmd Syntax * call matchadd('Debug', '\W\zs\(NOTE\|INFO\|IDEA\|NOTICE\)')
+  endif
+endif
+
+"==========================================
+" FileType Settings  文件类型设置
+"==========================================
+
+" 具体编辑文件类型的一般设置，比如不要 tab 等
+autocmd FileType python set tabstop=4 shiftwidth=4 expandtab ai
+autocmd FileType ruby,javascript,html,css,xml set tabstop=2 shiftwidth=2 softtabstop=2 expandtab ai
+autocmd BufRead,BufNewFile *.md,*.mkd,*.markdown set filetype=markdown.mkd
+autocmd BufRead,BufNewFile *.part set filetype=html
+autocmd BufRead,BufNewFile *.vue setlocal filetype=vue.html.javascript tabstop=2 shiftwidth=2 softtabstop=2 expandtab ai
+
+" disable showmatch when use > in php
+au BufWinEnter *.php set mps-=<:>
+
+" 保存python文件时删除多余空格
+fun! <SID>StripTrailingWhitespaces()
+    let l = line(".")
+    let c = col(".")
+    %s/\s\+$//e
+    call cursor(l, c)
+endfun
+autocmd FileType c,cpp,java,go,php,javascript,puppet,python,rust,twig,xml,yml,perl autocmd BufWritePre <buffer> :call <SID>StripTrailingWhitespaces()
+
+" 定义函数AutoSetFileHead，自动插入文件头
+autocmd BufNewFile *.sh,*.py,*tcl exec ":call AutoSetFileHead()"
+function! AutoSetFileHead()
+    "如果文件类型为.sh文件
+    if &filetype == 'sh'
+        call setline(1, "\#!/bin/bash")
+    endif
+
+    "如果文件类型为python
+    if &filetype == 'python'
+        " call setline(1, "\#!/usr/bin/env python")
+        " call append(1, "\# encoding: utf-8")
+        call setline(1, "\# -*- coding: utf-8 -*-")
+    endif
+
+    "如果文件类型为tcl
+    if &filetype == 'tcl'
+        call setline(1, "\#!/usr/bin/env wish")
+    endif
+
+    normal G
+    normal o
+    normal ^d$
+    normal o
+    normal ^d$
+endfunc
 
 " enable mode line and apply current file without reopen file
 nnoremap <leader>ml :setlocal invmodeline <bar> doautocmd BufRead<cr>
+
+" \rb                 一键去除全部尾部空白
+imap <leader>rb <esc>:let _s=@/<bar>:%s/\s\+$//e<bar>:let @/=_s<bar>:nohl<cr>
+nmap <leader>rb :let _s=@/<bar>:%s/\s\+$//e<bar>:let @/=_s<bar>:nohl<cr>
+vmap <leader>rb <esc>:let _s=@/<bar>:%s/\s\+$//e<bar>:let @/=_s<bar>:nohl<cr>
+
+" \ev                 编辑当前所使用的 Vim 配置文件
+nmap <leader>emv <esc>:e $MYVIMRC<cr>
+nmap <leader>smv <esc>:source $MYVIMRC<cr>
+
+" ######################### gui ##########################
+" 判断是否处于 GUI 界面
+if has('gui_running')
+    let g:isGUI = 1
+else
+    let g:isGUI = 0
+endif
+
+" 判断操作系统类型
+if(has('win32') || has('win64'))
+    let g:isWIN = 1
+    let g:isMAC = 0
+else
+    if system('uname') =~ 'Darwin'
+        let g:isWIN = 0
+        let g:isMAC = 1
+    else
+        let g:isWIN = 0
+        let g:isMAC = 0
+    endif
+endif
+
+" 使用 GUI 界面时的设置
+if g:isGUI
+    " 启动时自动最大化窗口
+    if g:isWIN
+        au GUIEnter * simalt ~x
+    endif
+    "winpos 20 20              " 指定窗口出现的位置，坐标原点在屏幕左上角
+    "set lines=20 columns=90   " 指定窗口大小，lines 为高度，columns 为宽度
+    set guioptions+=c          " 使用字符提示框
+    set guioptions-=m          " 隐藏菜单栏
+    set guioptions-=T          " 隐藏工具栏
+    set guioptions-=L          " 隐藏左侧滚动条
+    set guioptions-=r          " 隐藏右侧滚动条
+    set guioptions-=b          " 隐藏底部滚动条
+    set showtabline=0          " 隐藏Tab栏
+    set cursorline             " 高亮突出当前行
+    " set cursorcolumn         " 高亮突出当前列
+endif
 
 " ######################### tip ##########################
 " J                     >>> merge current line and next line to current line
@@ -333,4 +665,4 @@ nnoremap <leader>ml :setlocal invmodeline <bar> doautocmd BufRead<cr>
 " see corresponding modeline option
 "   :verbose set modeline? modelines?
 "
-" vim:tabstop=4:shiftwidth=4:textwidth=100
+" vim:tabstop=4:shiftwidth=4:textwidth=100:expandtab
